@@ -49,7 +49,7 @@ a Dockerfile.
 
 | Directory   | Status                  | Description                                                    | Upstream |
 |-------------|-------------------------|----------------------------------------------------------------|----------|
-| `lance-ffi` | Planned, not yet added  | Lance Rust SDK wrapper with a C ABI for the StarRocks Lance connector | [beinan/starrocks-lance-ffi](https://github.com/beinan/starrocks-lance-ffi) |
+| [`lance-ffi`](lance-ffi/) | Native x86_64 / aarch64  | Lance Rust SDK wrapper with a C ABI for the StarRocks Lance connector | [beinan/starrocks-lance-ffi](https://github.com/beinan/starrocks-lance-ffi) |
 
 ## Platform policy
 
