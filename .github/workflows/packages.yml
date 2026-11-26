@@ -1,0 +1,81 @@
+name: Build and test thirdparty packages
+on:
+  pull_request:
+  push:
+    branches: ['**']
+    tags: ['*-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.packages.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check shared release tooling
+        run: python3 -m unittest discover -s checks
+      - id: packages
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          args=()
+          if [[ "$REF_TYPE" == tag ]]; then
+            git merge-base --is-ancestor HEAD origin/main
+            args+=("$REF_NAME")
+          fi
+          echo "matrix=$(python3 scripts/packages.py "${args[@]}")" >> "$GITHUB_OUTPUT"
+  package:
+    needs: discover
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/build-cache
+          key: thirdparty-${{ matrix.name }}-${{ matrix.platform }}-${{ hashFiles(format('{0}/**', matrix.name)) }}
+          restore-keys: thirdparty-${{ matrix.name }}-${{ matrix.platform }}-
+      - name: Build, test and package in declared environment
+        env:
+          PACKAGE_NAME: ${{ matrix.name }}
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_VERSION: ${{ matrix.version }}
+        run: |
+          bash "$PACKAGE_NAME/build.sh" --output "$RUNNER_TEMP/packages" --cache-dir "$RUNNER_TEMP/build-cache"
+          cd "$RUNNER_TEMP/packages"
+          archive="$PACKAGE_NAME-$PACKAGE_VERSION-$PACKAGE_PLATFORM.tar.gz"
+          test -s "$archive"
+          sha256sum --check "$archive.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.name }}-${{ matrix.platform }}
+          path: ${{ runner.temp }}/packages/*.tar.gz*
+          if-no-files-found: error
+  release:
+    if: github.ref_type == 'tag'
+    needs: [discover, package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: artifacts
+      - name: Publish only packages built and tested from this release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd artifacts
+          sha256sum --check ./*.sha256
+          gh release create "$GITHUB_REF_NAME" ./*.tar.gz* --repo "$GITHUB_REPOSITORY" --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
