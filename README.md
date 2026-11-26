@@ -124,9 +124,14 @@ Release assets are named:
   [Platform policy](#platform-policy).
 - `<arch>` is the `uname -m` value: `x86_64` (amd64) or `aarch64` (arm64).
 
-Release tags and their assets are immutable. StarRocks pins every asset by
-URL and checksum, so a published release is never re-tagged or re-uploaded.
-To ship a fix, bump the version and push a new tag.
+A release that is referenced from any StarRocks branch is frozen. Never
+re-tag it or re-upload its assets. StarRocks pins every asset by URL and
+checksum, so changing a referenced release breaks every StarRocks build
+that pins it. To ship a fix, bump the version and push a new tag.
+
+A release that no StarRocks branch references yet can still be re-tagged
+or rebuilt, for example to fix a broken build. Check all StarRocks
+branches before doing so.
 
 ## Using a release from StarRocks
 

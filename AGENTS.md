@@ -139,9 +139,11 @@ it into a thirdparty directory.
 - Each archive unpacks into a single top-level directory.
 - Release assets are built by CI from the tag. Never upload a binary that
   was built by hand.
-- Tags and assets are immutable. Never delete, move, or re-push a release
-  tag, and never replace the assets of a published release. To fix a
-  release, publish a new version.
+- A release that is referenced from any StarRocks branch is frozen. Never
+  delete, move, or re-push its tag, and never replace its assets. To fix
+  it, publish a new version.
+- A release that no StarRocks branch references yet can be re-tagged or
+  rebuilt. Check every StarRocks branch first.
 - Any change under `<name>/` that changes the produced binaries needs a new
   version. Documentation-only changes do not.
 
@@ -204,4 +206,4 @@ When importing from an existing repository, such as `lance-ffi` from
 - Do not reference one thirdparty directory from another.
 - Do not commit binaries, source archives, or build outputs.
 - Do not track a moving upstream branch.
-- Do not re-tag, delete, or overwrite a published release.
+- Do not re-tag, delete, or overwrite a release that StarRocks references.
